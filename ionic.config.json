@@ -1,0 +1,7 @@
+{
+  "name": "dakasa",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "react-vite"
+}

@@ -1,0 +1,87 @@
+body {
+  background-image: url("/media/auth-bg-vertical.jpg") !important;
+  background-repeat: no-repeat !important;
+  --ion-background-color: #d1588611;
+  background-position: center !important;
+  background-size: cover !important;
+}
+
+#container {
+  text-align: center;
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+#container h1 {
+  font-family: 'Meow Script';
+  font-size: 4em;
+  color: #FFF;
+  text-shadow: 1px 0px 9px#FFF;
+}
+
+.forms {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+ion-input.field {
+  --background: #fff5 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Montserrat';
+  width: 70%;
+  max-width: 400px;
+  margin: 10px 0px;
+}
+
+.sendForm {
+  width: 70%;
+  max-width: 400px;
+  border-radius: 30px;
+}
+
+.changeForm {
+  cursor: pointer;
+  transition: color 0.4s;
+}
+
+.changeForm:hover {
+  color: var(--ion-color-step-900);
+}
+
+#registerContainer {
+  display: flex;
+  transition: margin-left 0.8s;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.registerStep {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100% !important;
+  min-width: 100% !important;
+}
+
+#backOrNext {
+  display: flex;
+  width: 70%;
+  max-width: 400px;
+}
+
+.intermediaryBtn {
+  width: 50%;
+}
