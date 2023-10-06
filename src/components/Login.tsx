@@ -61,6 +61,7 @@ const Login: React.FC<LoginProps> = (props) => {
 const Register: React.FC<LoginProps> = (props) => {
   const Next = (<IonButton className="sendForm" color="secondary" onClick={() => NextOrSend()}>Próximo<IonIcon slot='end' icon={arrowForward} /></IonButton>);
   const [component, setComponent] = React.useState(Next);
+  const [previewImage, setPreviewImage] = React.useState('');
   const NextOrSend = () => {
     const parent = document.getElementById("registerContainer") as HTMLElement;
     const getClasses = document.getElementsByClassName("stepIncomplete");
@@ -130,17 +131,29 @@ const Register: React.FC<LoginProps> = (props) => {
     );
   }
 
+  const imagePreview = () => {
+    const content = document.getElementById("insertAvatar") as HTMLInputElement;
+    const c = document.getElementById("changeAvatar") as HTMLElement;
+
+    if (!content.files || !content.files[0]) {return;}
+    c.style.opacity = '0';
+    setPreviewImage(URL.createObjectURL(content.files[0]))
+  }
+
   return (
     <div className="forms" id="login">
       <div id='registerContainer'>
-        {/* <div className='registerStep stepIncomplete'>
+        <div className='registerStep stepIncomplete'>
           <div id="avatar">
-            <div id="newAvatar">
+            <img src={previewImage} id="newAvatar"/>
+            <label htmlFor="insertAvatar" id="changeAvatar">
               <IonIcon icon={add}/>
-            </div>
+              <span id="changeAvatarText">Adicione um Avatar</span>
+            </label>
+            <input type="file" accept='img/*' id="insertAvatar" onChange={imagePreview}/>
           </div>
           <IonInput color="dark" className='field' labelPlacement="floating" fill="solid" label='Username'></IonInput>
-        </div> */}
+        </div>
         <div className='registerStep stepIncomplete'>
           <IonInput color="dark" className='field' labelPlacement="floating" fill="solid" label='Email' type='email'></IonInput>
           <IonInput color="dark" className='field' labelPlacement="floating" fill="solid" label='Confirmar Email' type='email'></IonInput>
