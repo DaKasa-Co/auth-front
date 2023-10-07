@@ -4,6 +4,87 @@ import { sparkles, arrowBack, mail, paperPlane, arrowForward, add } from 'ionico
 import './Login.css';
 import { useMaskito } from '@maskito/react';
 
+type RegisterParams = {
+  birthday: string,
+  email: string,
+  name: string,
+  password: string,
+  phoneNumber: number,
+  username: string
+}
+
+class validateField {
+  static email(email: string): Error | void {
+    const r = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+
+    if (!r.test(email)) {
+      return new Error(`O email ${email} não é válido`);
+    }
+  }
+
+  static username(username: string): Error | void {
+    const r = /^[\.\-\w]{3,13}$/
+
+    if (!r.test(username)) {
+      return new Error(`O usuário ${username} não é válido`);
+    }
+  }
+
+  static password(password: string): Error | void {
+    let hasUpper: boolean = false; 
+    let hasLower: boolean = false;
+    let hasNum: boolean = false;
+    let hasSpecialChar: Boolean = false;
+
+    if (password.length < 8) {
+      return new Error(`A senha precisa ser mais comprida`);
+    }
+
+    for (let i = 0; i < password.length; i++) {
+      const char = password[i];
+      switch (true) {
+        case char == char.toUpperCase():
+          hasUpper = true;
+          break;
+      
+        case char == char.toLowerCase():
+          hasLower = true;
+          break;
+        
+        case char >= '0' && char <= '9':
+          hasNum = true;
+          break;
+        
+        case /[ `!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~]/.test(char):
+          hasSpecialChar = true;
+          break;
+      }
+    }
+
+    if (!hasUpper) {
+      return new Error(`Senha precisa ter ao menos uma letras maiúsculas`);
+    }
+  
+    if (!hasLower) {
+      return new Error(`Senha precisa ter ao menos uma letra minúscula`);
+    }
+  
+    if (!hasNum) {
+      return new Error(`Senha precisa ter ao menos um número`);
+    }
+  
+    if (!hasSpecialChar) {
+      return new Error(`Senha precisa ter ao menos um caractere especial`);
+    }
+  }
+}
+
+class FetchIdentities {
+  static register(register: RegisterParams) {
+    const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/i;
+    const usernameRegex = /^[\.\-\w]{3,13}$/
+  }
+}
 
 const ContainerForm: React.FC = () => {
   const [forms, setForms] = React.useState('')
@@ -156,7 +237,7 @@ const Register: React.FC<LoginProps> = (props) => {
         </div>
         <div className='registerStep stepIncomplete'>
           <IonInput color="dark" className='field' labelPlacement="floating" fill="solid" label='Email' type='email'></IonInput>
-          <IonInput color="dark" className='field' labelPlacement="floating" fill="solid" label='Confirmar Email' type='email'></IonInput>
+          <IonInput color="dark" className='field' labelPlacement="floating" fill="solid" label='Número Celular' placeholder='912345678'></IonInput>
           <IonInput color="dark" className='field' labelPlacement="floating" fill="solid" label='Senha' type='password'></IonInput>
           <IonInput color="dark" className='field' labelPlacement="floating" fill="solid" label='Confirmar senha' type='password'></IonInput>
         </div>
