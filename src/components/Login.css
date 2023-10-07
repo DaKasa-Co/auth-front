@@ -36,13 +36,18 @@ body {
 
 ion-input.field {
   --background: #fff5 !important;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   font-family: 'Montserrat';
   width: 70%;
   max-width: 400px;
   margin: 10px 0px;
+}
+
+ion-input.field .error-text {
+  font-weight: bold;
+}
+
+.ion-invalid {
+  --highlight-color-invalid: #7A0D0D !important;
 }
 
 .sendForm {
