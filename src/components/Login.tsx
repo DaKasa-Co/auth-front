@@ -1,11 +1,10 @@
 import React from 'react';
-import { IonButton, IonIcon, IonInput, IonTitle } from '@ionic/react';
+import { IonAlert, IonButton, IonIcon, IonInput, IonTitle, useIonAlert } from '@ionic/react';
 import { sparkles, arrowBack, mail, paperPlane, arrowForward, add } from 'ionicons/icons';
 import './Login.css';
 import { useMaskito } from '@maskito/react';
 import { validateField } from '@dakasa/mfe-utils';
 import axios from 'axios';
-import process from 'process';
 
 type RegisterParams = {
   birthday: string,
@@ -27,17 +26,13 @@ class FetchIdentities {
       validateField.password(register.password);
       validateField.username(register.username);
 
-      axios.post(`http://${import.meta.env.VITE_REACT_APP_DOMAIN}:${import.meta.env.VITE_REACT_APP_PORT}/api/register`, register)
-      .then((response) => {
-        console.log(response);
-        alert(response.data);
-      })
-      .then((error) => {
-        alert(error);
-      });
+    const response = await axios.post(`http://${import.meta.env.VITE_REACT_APP_DOMAIN}:${import.meta.env.VITE_REACT_APP_PORT}/api/register`, register)
+      .then((response) => { return {status: response.status, msg: response.data.msg} })
+      .catch((error) => { return {status: error.response.status, msg: error.response.data.msg } });
 
+      return {status: response.status, msg: response.msg} 
     } catch(err) {
-      alert(err)
+      return {status: 400, msg: err}
     }
   }
 }
@@ -111,6 +106,7 @@ const Register: React.FC<navigateFormProps> = (props) => {
   const [isNameTouched, setIsNameTouched] = React.useState(false);
   const [isUsernameTouched, setIsUsernameTouched] = React.useState(false);
   const [isDateTouched, setIsDateTouched] = React.useState(false);
+  const [presentError] = useIonAlert();
 
   const NextOrSend = async () => {
     const parent = document.getElementById("registerContainer") as HTMLElement;
@@ -142,10 +138,25 @@ const Register: React.FC<navigateFormProps> = (props) => {
         phoneNumber: parseInt((document.getElementById("phoneNum") as HTMLInputElement).value),
         address: (document.getElementById("addressField") as HTMLInputElement).value,
         avatar: base64Avatar,
-        
       }
 
-      await FetchIdentities.register(register);
+      FetchIdentities.register(register)
+      .then((response) => {
+        if (response == undefined) {
+          return;
+        }
+  
+        if (response.status === 201) {
+          //TO DO: REDIRECT TO HOME
+          console.log(response.msg);
+        }
+  
+        presentError({
+          header: "Atenção",
+          message: response.msg as string,
+          buttons: ['OK'],
+        })
+      })
       return;
     }
 
