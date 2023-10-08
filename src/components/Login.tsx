@@ -12,7 +12,7 @@ type RegisterParams = {
   email: string,
   name: string,
   password: string,
-  phoneNumber: string,
+  phoneNumber: number,
   username: string,
   address: string,
   avatar: string,
@@ -27,15 +27,7 @@ class FetchIdentities {
       validateField.password(register.password);
       validateField.username(register.username);
 
-      const config = {
-        headers: {
-          'Access-Control-Allow-Origin': `http://${import.meta.env.VITE_REACT_APP_DOMAIN}:${import.meta.env.VITE_REACT_APP_PORT}`,
-          'Access-Control-Allow-Methods': "DELETE, POST, GET, OPTIONS",
-          'Access-Control-Allow-Headers': "Content-Type, Authorization, X-Requested-With",
-        }
-      }
-
-      axios.post(`http://${import.meta.env.VITE_REACT_APP_DOMAIN}:${import.meta.env.VITE_REACT_APP_PORT}/api/register`, register, config)
+      axios.post(`http://${import.meta.env.VITE_REACT_APP_DOMAIN}:${import.meta.env.VITE_REACT_APP_PORT}/api/register`, register)
       .then((response) => {
         console.log(response);
         alert(response.data);
@@ -147,7 +139,7 @@ const Register: React.FC<navigateFormProps> = (props) => {
         password: (document.getElementById("passwordField") as HTMLInputElement).value,
         name: (document.getElementById("nameField") as HTMLInputElement).value,
         birthday: (document.getElementById("birthdayField") as HTMLInputElement).value,
-        phoneNumber: (document.getElementById("phoneNum") as HTMLInputElement).value,
+        phoneNumber: parseInt((document.getElementById("phoneNum") as HTMLInputElement).value),
         address: (document.getElementById("addressField") as HTMLInputElement).value,
         avatar: base64Avatar,
         
