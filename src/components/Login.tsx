@@ -5,18 +5,21 @@ import './Login.css';
 import { useMaskito } from '@maskito/react';
 import { validateField } from '@dakasa/mfe-utils';
 import axios from 'axios';
+import process from 'process';
 
 type RegisterParams = {
-  birthday: Date,
+  birthday: string,
   email: string,
   name: string,
   password: string,
-  phoneNumber: number,
-  username: string
+  phoneNumber: string,
+  username: string,
+  address: string,
+  avatar: string,
 }
 
 class FetchIdentities {
-  static register(register: RegisterParams) {
+  static async register(register: RegisterParams) {
     try {
       validateField.email(register.email);
       validateField.noSpecialChar("name", register.name);
@@ -24,10 +27,23 @@ class FetchIdentities {
       validateField.password(register.password);
       validateField.username(register.username);
 
-      axios.post(`${process.env.BASEURL}/api/register`, register)
+      const config = {
+        headers: {
+          'Access-Control-Allow-Origin': `http://${import.meta.env.VITE_REACT_APP_DOMAIN}:${import.meta.env.VITE_REACT_APP_PORT}`,
+          'Access-Control-Allow-Methods': "DELETE, POST, GET, OPTIONS",
+          'Access-Control-Allow-Headers': "Content-Type, Authorization, X-Requested-With",
+        }
+      }
+
+      axios.post(`http://${import.meta.env.VITE_REACT_APP_DOMAIN}:${import.meta.env.VITE_REACT_APP_PORT}/api/register`, register, config)
       .then((response) => {
+        console.log(response);
         alert(response.data);
       })
+      .then((error) => {
+        alert(error);
+      });
+
     } catch(err) {
       alert(err)
     }
@@ -104,13 +120,40 @@ const Register: React.FC<navigateFormProps> = (props) => {
   const [isUsernameTouched, setIsUsernameTouched] = React.useState(false);
   const [isDateTouched, setIsDateTouched] = React.useState(false);
 
-  const NextOrSend = () => {
+  const NextOrSend = async () => {
     const parent = document.getElementById("registerContainer") as HTMLElement;
     const getClasses = document.getElementsByClassName("stepIncomplete");
     const steps = document.getElementsByClassName("registerStep").length;
     const gl = getClasses.length - 1;
     if (gl == 0) {
-      alert("send");
+      const avatar = (document.getElementById("insertAvatar") as HTMLInputElement).files
+      let base64Avatar = "";
+      
+      // TO DO: Add in [mfe-utils] media validation
+      // if (avatar) {
+      //   const reader = new FileReader();
+      //   reader.readAsDataURL(avatar[0]);
+      //   reader.onload = function () {
+      //     console.log(reader.result);
+      //   };
+      //   reader.onerror = function (error) {
+      //     console.log('Error: ', error);
+      //   };
+      // }
+
+      const register: RegisterParams = {
+        username: (document.getElementById("usernameField") as HTMLInputElement).value,
+        email: (document.getElementById("emailField") as HTMLInputElement).value,
+        password: (document.getElementById("passwordField") as HTMLInputElement).value,
+        name: (document.getElementById("nameField") as HTMLInputElement).value,
+        birthday: (document.getElementById("birthdayField") as HTMLInputElement).value,
+        phoneNumber: (document.getElementById("phoneNum") as HTMLInputElement).value,
+        address: (document.getElementById("addressField") as HTMLInputElement).value,
+        avatar: base64Avatar,
+        
+      }
+
+      await FetchIdentities.register(register);
       return;
     }
 
@@ -196,12 +239,13 @@ const Register: React.FC<navigateFormProps> = (props) => {
   const validate = (
     ev: Event, 
     update: React.Dispatch<React.SetStateAction<"" | Error | undefined>>, 
-    func: Function) => 
+    func: Function,
+    key: string | false = false) => 
   {
     const value = (ev.target as HTMLInputElement).value;
     setValidateEmail(undefined);
     if (value === '') return;
-    const err = func(value);
+    const err = key ? func(key, value) : func(value);
     !err ? update("") : update(err);
   };
 
@@ -231,6 +275,8 @@ const Register: React.FC<navigateFormProps> = (props) => {
             <input type="file" accept='img/*' id="insertAvatar" onChange={imagePreview}/>
           </div>
           <IonInput
+            value='.-g10'
+            id="usernameField"
             className={`field ${validateUsername === "" && 'ion-valid'} ${validateUsername != "" && 'ion-invalid'} ${isUsernameTouched && 'ion-touched'}`}
             color="dark" 
             labelPlacement="floating" 
@@ -242,7 +288,9 @@ const Register: React.FC<navigateFormProps> = (props) => {
           />
         </div>
         <div className='registerStep stepIncomplete'>
-          <IonInput 
+          <IonInput
+            value='giovanni@gmail.com'
+            id="emailField"
             className={`field ${validateEmail === "" && 'ion-valid'} ${validateEmail != "" && 'ion-invalid'} ${isEmailTouched && 'ion-touched'}`} 
             color="dark"
             labelPlacement="floating" 
@@ -254,18 +302,20 @@ const Register: React.FC<navigateFormProps> = (props) => {
             onIonBlur={() => markTouched(setIsEmailTouched)}
           />
           <IonInput 
+            value='55981750155'
+            id="phoneNum" 
             className='field' 
             labelPlacement="floating" 
             fill="solid" 
             label='Número Celular' 
-            id="phoneNum" 
             placeholder='55912345678' 
             color="dark" 
             onIonInput={insertRefPhoneNum}
           />
-          <IonInput 
-            className={`field ${validatePassword === "" && 'ion-valid'} ${validatePassword != "" && 'ion-invalid'} ${isPasswordTouched && 'ion-touched'}`} 
+          <IonInput
+            value="Potato123*"
             id="passwordField"
+            className={`field ${validatePassword === "" && 'ion-valid'} ${validatePassword != "" && 'ion-invalid'} ${isPasswordTouched && 'ion-touched'}`} 
             color="dark" 
             labelPlacement="floating" 
             fill="solid" 
@@ -276,6 +326,7 @@ const Register: React.FC<navigateFormProps> = (props) => {
             onIonBlur={() => markTouched(setIsPasswordTouched)}
           />
           <IonInput
+            value="Potato123*"
             className={`field ${validateCopyPassword === "" && 'ion-valid'} ${validateCopyPassword != "" && 'ion-invalid'} ${isCopyPasswordTouched && 'ion-touched'}`} 
             id="passwordCopyField"
             color="dark"
@@ -290,16 +341,20 @@ const Register: React.FC<navigateFormProps> = (props) => {
         </div>
         <div className='registerStep stepIncomplete'>
           <IonInput 
+            value="Giovanni Martins"
+            id="nameField"
             className={`field ${validateName === "" && 'ion-valid'} ${validateName != "" && 'ion-invalid'} ${isNameTouched && 'ion-touched'}`}
             color="dark" 
             labelPlacement="floating" 
             fill="solid" 
             label='Nome Completo'
             errorText={validateName instanceof Error ? validateName.message : validateName}
-            onIonInput={(event) => validate(event, setValidateName, validateField.noSpecialChar)}
+            onIonInput={(event) => validate(event, setValidateName, validateField.noSpecialChar, "name")}
             onIonBlur={() => markTouched(setIsNameTouched)}
           />
           <IonInput
+            value="2002-11-05"
+            id="birthdayField"
             className={`field ${validateDate === "" && 'ion-valid'} ${validateDate != "" && 'ion-invalid'} ${isDateTouched && 'ion-touched'}`}
             color="dark"
             labelPlacement="floating" 
@@ -310,7 +365,7 @@ const Register: React.FC<navigateFormProps> = (props) => {
             onIonInput={(event) => validate(event, setValidateDate, validateField.birthday)}
             onIonBlur={() => markTouched(setIsDateTouched)}
           />
-          <IonInput color="dark" className='field' labelPlacement="floating" fill="solid" label='Endereço'></IonInput>
+          <IonInput value="Rua dos peixinhos" id="addressField" color="dark" className='field' labelPlacement="floating" fill="solid" label='Endereço'></IonInput>
         </div>
       </div>
       {component}
