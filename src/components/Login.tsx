@@ -30,11 +30,19 @@ type RecoveryTicketRequestParams = {
 }
 
 type RecoveryTicketParams = {
-  ticket: string,
   password: string
+  status: {
+    ticket: string,
+    validation: {
+      tmp: number,
+    },
+  }
 }
-var ticket: RecoveryTicketParams;
+var recoveryObj: RecoveryTicketParams = {password: "", status: {ticket: "", validation: {tmp: 0}}};
 
+const capitalize = (str: string, lower = false) =>
+  (lower ? str.toLowerCase() : str).replace(/(?:^|\s|["'([{])+\S/g, match => match.toUpperCase());
+;
 
 class FetchIdentities {
   static async register(register: RegisterParams) {
@@ -46,8 +54,21 @@ class FetchIdentities {
       validateField.username(register.username);
 
     const response = await axios.post(`http://${import.meta.env.VITE_REACT_APP_DOMAIN}:${import.meta.env.VITE_REACT_APP_PORT}/api/register`, register)
-      .then((response) => { return {status: response.status, msg: response.data.msg} })
-      .catch((error) => { return {status: error.response.status, msg: error.response.data.msg } });
+      .then((response) => {
+        return {status: response.status, msg: ''} 
+      })
+      .catch((error) => { 
+        switch (error.status) {
+          case 400:
+            return {status: error.status, msg: 'Alguns campos estão errados'}
+          
+          case 409:
+            return {status: error.status, msg: 'Usuário com [email, username e número de celular] já existe'}
+
+          default:
+            return {status: error.status, msg: 'Um erro inesperado aconteceu. Tente novamente mais tarde'}
+        }
+       });
 
       return {status: response.status, msg: response.msg} 
     } catch(err) {
@@ -58,8 +79,19 @@ class FetchIdentities {
   static async login(login: LoginParams) {
     const url = `http://${import.meta.env.VITE_REACT_APP_DOMAIN}:${import.meta.env.VITE_REACT_APP_PORT}/api/login`;
     const response = await axios.post(url, login)
-      .then((response) => { return {status: response.status, msg: response.data.msg} })
-      .catch((error) => { return {status: error.response.status, msg: error.response.data.msg } });
+    .then((response) => { return {status: response.status, msg: '' } })
+    .catch((error) => { 
+        switch (error.response.status) {
+          case 400:
+            return {status: error.response.status, msg: 'Preencha os campos'}
+          
+          case 403:
+            return {status: error.response.status, msg: 'Credenciais incorretos'}
+
+          default:
+            return {status: error.response.status, msg: 'Um erro inesperado aconteceu. Tente novamente mais tarde'}
+        } 
+      })
 
     return {status: response.status, msg: response.msg} 
   }
@@ -67,8 +99,44 @@ class FetchIdentities {
   static async createTicketRecovery(req: RecoveryTicketRequestParams) {
     const url = `http://${import.meta.env.VITE_REACT_APP_DOMAIN}:${import.meta.env.VITE_REACT_APP_PORT}/api/recovery/create`;
     const response = await axios.post(url, req)
-      .then((response) => { return {status: response.status, msg: response.data.msg} })
-      .catch((error) => { return {status: error.response.status, msg: error.response.data.msg } });
+      .then((response) => { return {status: response.status, msg: JSON.parse(response.data).id} })
+      .catch((error) => {
+        switch (error.response.status) {
+          case 400:
+            return {status: error.response.status, msg: 'Campo inválido'}
+      
+          default:
+            return {status: error.response.status, msg: 'Um erro inesperado aconteceu. Tente novamente mais tarde'}
+        }
+      })
+
+    return {status: response.status, msg: capitalize(response.msg, true)} 
+  }
+
+  static async checkTicketRecovery(req: RecoveryTicketParams) {
+    const url = `http://${import.meta.env.VITE_REACT_APP_DOMAIN}:${import.meta.env.VITE_REACT_APP_PORT}/api/recovery/validate`;
+    const response = await axios.post(url, req)
+      .then((response) => { return {status: response.status, msg: '' } })
+      .catch((error) => { 
+        switch (error.status) {
+          case 410:
+            return {status: error.status, msg: 'Código expirado'}
+
+          default:
+            return {status: error.status, msg: 'Código incorreto'}
+        }
+      })
+
+    return {status: response.status, msg: response.msg} 
+  }
+
+  static async closeTicketRecovery(req: RecoveryTicketParams) {
+    const url = `http://${import.meta.env.VITE_REACT_APP_DOMAIN}:${import.meta.env.VITE_REACT_APP_PORT}/api/recovery/chall`;
+    const response = await axios.post(url, req)
+      .then((response) => { return {status: response.status, msg: 'A senha foi trocada com sucesso!'} })
+      .catch((error) => { 
+        return {status: error.status, msg: 'Um erro inesperado aconteceu. Tente novamente mais tarde'}
+      })
 
     return {status: response.status, msg: response.msg} 
   }
@@ -85,6 +153,10 @@ const ContainerForm: React.FC = () => {
 
     case "recovery2":
       ComponentForm = <RecoveryPart2 setForms={setForms}></RecoveryPart2>;
+      break;
+    
+    case "recovery3":
+      ComponentForm = <RecoveryPart3 setForms={setForms}></RecoveryPart3>;
       break;
 
     case "register":
@@ -309,7 +381,7 @@ const Register: React.FC<navigateFormProps> = (props) => {
     key: string | false = false) => 
   {
     const value = (ev.target as HTMLInputElement).value;
-    setValidateEmail(undefined);
+    update(undefined);
     if (value === '') return;
     const err = key ? func(key, value) : func(value);
     !err ? update("") : update(err);
@@ -455,17 +527,12 @@ const RecoveryPart1: React.FC<navigateFormProps> = (props) => {
       phoneNumber: isNaN(req.value as any) ? 0 : parseInt(req.value),
     }
 
+    props.setForms("recovery2");
     const response = await FetchIdentities.createTicketRecovery(recovery);
-    if (response.status == 201) {
-      props.setForms("recovery2");
+    if (response.status < 300) {
+      recoveryObj.status.ticket = response.msg;
       return;
     }
-
-    presentError({
-      header: "Atenção",
-      message: response.msg as string,
-      buttons: ['OK'],
-    })
   }
 
   return (
@@ -488,6 +555,25 @@ const RecoveryPart1: React.FC<navigateFormProps> = (props) => {
 }
 
 const RecoveryPart2: React.FC<navigateFormProps> = (props) => {
+  const [presentError] = useIonAlert();
+
+  const checkRecovery = async () => {
+    const req = document.getElementById("validationField") as HTMLInputElement;
+    recoveryObj.status.validation.tmp = isNaN(req.value as any) ? 0 : parseInt(req.value);
+
+    const response = await FetchIdentities.checkTicketRecovery(recoveryObj);
+    if (response.status < 300) {
+      props.setForms("recovery3");
+      return;
+    }
+
+    presentError({
+      header: "Atenção",
+      message: response.msg as string,
+      buttons: ['OK'],
+    })
+  }
+
   const validationMask = useMaskito({
     options: {
       mask: [...Array(6).fill(/\d/)],
@@ -502,7 +588,96 @@ const RecoveryPart2: React.FC<navigateFormProps> = (props) => {
   return (
     <div className="forms" id="login">
       <IonInput id="validationField" onInput={insertRefValidation} color="dark" className='field' labelPlacement="floating" fill="solid" label='Validação' placeholder='000000'></IonInput>
-      <IonButton className="sendForm" color="secondary" onClick={() => props.setForms("")}>
+      <IonButton className="sendForm" color="secondary" onClick={() => checkRecovery()}>
+        Enviar
+        <IonIcon slot='end' icon={paperPlane} />
+      </IonButton>
+      <br /><br />
+      <IonButton shape='round' size='small' onClick={() => props.setForms("recovery1")}>
+        Inserir outro email
+        <IonIcon slot='end' icon={mail} />
+      </IonButton>
+    </div>
+  )
+}
+
+const RecoveryPart3: React.FC<navigateFormProps> = (props) => {
+  const [validatePassword, setValidatePassword] = React.useState<Error | "">();
+  const [validateCopyPassword, setValidateCopyPassword] = React.useState<Error | "">();
+  const [isPasswordTouched, setIsPasswordTouched] = React.useState(false);
+  const [isCopyPasswordTouched, setIsCopyPasswordTouched] = React.useState(false);
+  const [presentError] = useIonAlert();
+
+  const closeRecovery = async () => {
+    const password = document.getElementById("passwordField") as HTMLInputElement;
+    recoveryObj.password = password.value;
+
+    const response = await FetchIdentities.closeTicketRecovery(recoveryObj);
+    presentError({
+      header: "Atenção",
+      message: response.msg as string,
+      buttons: ['OK'],
+    })
+
+    if (response.status < 300) {
+      props.setForms("");
+      return;
+    }
+  }
+
+  const validate = (
+    ev: Event, 
+    update: React.Dispatch<React.SetStateAction<"" | Error | undefined>>, 
+    func: Function,
+    key: string | false = false) => 
+  {
+    const value = (ev.target as HTMLInputElement).value;
+    update(undefined);
+    if (value === '') return;
+    const err = key ? func(key, value) : func(value);
+    !err ? update("") : update(err);
+  };
+
+  const markTouched = (touch: React.Dispatch<React.SetStateAction<boolean>>) => {
+    touch(true);
+  };
+
+  const samePassword = () => {
+    const pw = document.getElementById("passwordField") as HTMLInputElement;
+    const cpw = document.getElementById("passwordCopyField") as HTMLInputElement;
+
+    if (pw.value != cpw.value) {
+      return new Error("A confirmação da senha tem que ser identica a senha");
+    }
+  }
+  
+  return (
+    <div className="forms" id="login">
+      <IonInput
+        id="passwordField"
+        className={`field ${validatePassword === "" && 'ion-valid'} ${validatePassword != "" && 'ion-invalid'} ${isPasswordTouched && 'ion-touched'}`} 
+        color="dark" 
+        labelPlacement="floating" 
+        fill="solid" 
+        label='Senha' 
+        type='password'
+        errorText={validatePassword instanceof Error ? validatePassword.message : validatePassword}
+        onIonInput={(event) => validate(event, setValidatePassword, validateField.password)}
+        onIonBlur={() => markTouched(setIsPasswordTouched)}
+      />
+      <IonInput
+        className={`field ${validateCopyPassword === "" && 'ion-valid'} ${validateCopyPassword != "" && 'ion-invalid'} ${isCopyPasswordTouched && 'ion-touched'}`} 
+        id="passwordCopyField"
+        color="dark"
+        labelPlacement="floating" 
+        fill="solid" 
+        label='Confirmar senha' 
+        type='password'
+        errorText={validateCopyPassword instanceof Error ? validateCopyPassword.message : validateCopyPassword}
+        onIonInput={(event) => validate(event, setValidateCopyPassword, samePassword)}
+        onIonBlur={() => markTouched(setIsCopyPasswordTouched)}
+      />
+      <IonButton className="sendForm" color="secondary" onClick={() => closeRecovery()}>
         Enviar
         <IonIcon slot='end' icon={paperPlane} />
       </IonButton>
