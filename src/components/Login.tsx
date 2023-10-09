@@ -1,5 +1,5 @@
 import React from 'react';
-import { IonAlert, IonButton, IonIcon, IonInput, IonTitle, useIonAlert } from '@ionic/react';
+import { IonButton, IonIcon, IonInput, IonTitle, useIonAlert } from '@ionic/react';
 import { sparkles, arrowBack, mail, paperPlane, arrowForward, add } from 'ionicons/icons';
 import './Login.css';
 import { useMaskito } from '@maskito/react';
@@ -16,6 +16,25 @@ type RegisterParams = {
   address: string,
   avatar: string,
 }
+
+type LoginParams = {
+  username: string,
+  email: string,
+  password: string,
+}
+
+type RecoveryTicketRequestParams = {
+  username: string,
+  email: string,
+  phoneNumber: number,
+}
+
+type RecoveryTicketParams = {
+  ticket: string,
+  password: string
+}
+var ticket: RecoveryTicketParams;
+
 
 class FetchIdentities {
   static async register(register: RegisterParams) {
@@ -34,6 +53,24 @@ class FetchIdentities {
     } catch(err) {
       return {status: 400, msg: err}
     }
+  }
+
+  static async login(login: LoginParams) {
+    const url = `http://${import.meta.env.VITE_REACT_APP_DOMAIN}:${import.meta.env.VITE_REACT_APP_PORT}/api/login`;
+    const response = await axios.post(url, login)
+      .then((response) => { return {status: response.status, msg: response.data.msg} })
+      .catch((error) => { return {status: error.response.status, msg: error.response.data.msg } });
+
+    return {status: response.status, msg: response.msg} 
+  }
+
+  static async createTicketRecovery(req: RecoveryTicketRequestParams) {
+    const url = `http://${import.meta.env.VITE_REACT_APP_DOMAIN}:${import.meta.env.VITE_REACT_APP_PORT}/api/recovery/create`;
+    const response = await axios.post(url, req)
+      .then((response) => { return {status: response.status, msg: response.data.msg} })
+      .catch((error) => { return {status: error.response.status, msg: error.response.data.msg } });
+
+    return {status: response.status, msg: response.msg} 
   }
 }
 
@@ -72,11 +109,36 @@ interface navigateFormProps {
 }
 
 const Login: React.FC<navigateFormProps> = (props) => {
+  const [presentError] = useIonAlert();
+
+  const sendCredentials = async () => {
+    const user = document.getElementById("userField") as HTMLInputElement;
+    const password = document.getElementById("passwordField") as HTMLInputElement;
+    const login: LoginParams = {
+      email: user.value,
+      username: user.value,
+      password: password.value
+    }
+
+    const response = await FetchIdentities.login(login);
+    if (response.status == 200) {
+      // TO DO: REDIRECT TO HOME
+      console.log(response.msg);
+      return;
+    }
+
+    presentError({
+      header: "Atenção",
+      message: response.msg as string,
+      buttons: ['OK'],
+    })
+  }
+
   return (
     <div className="forms" id="login">
-      <IonInput color="dark" className='field' labelPlacement="floating" fill="solid" label='Username'></IonInput>
-      <IonInput color="dark" className='field' labelPlacement="floating" fill="solid" label='Senha' type='password'></IonInput>
-      <IonButton className="sendForm" color="secondary" onClick={() => props.setForms("register")}>
+      <IonInput id="userField" color="dark" className='field' labelPlacement="floating" fill="solid" label='Email/Username'></IonInput>
+      <IonInput id="passwordField" color="dark" className='field' labelPlacement="floating" fill="solid" label='Senha' type='password'></IonInput>
+      <IonButton className="sendForm" color="secondary" onClick={() => { sendCredentials(); }}>
         Enviar
         <IonIcon slot='end' icon={paperPlane} />
       </IonButton>
@@ -149,6 +211,7 @@ const Register: React.FC<navigateFormProps> = (props) => {
         if (response.status === 201) {
           //TO DO: REDIRECT TO HOME
           console.log(response.msg);
+          return;
         }
   
         presentError({
@@ -292,7 +355,7 @@ const Register: React.FC<navigateFormProps> = (props) => {
         </div>
         <div className='registerStep stepIncomplete'>
           <IonInput
-            value='giovanni@gmail.com'
+            value='giovanni.c.martins@gmail.com'
             id="emailField"
             className={`field ${validateEmail === "" && 'ion-valid'} ${validateEmail != "" && 'ion-invalid'} ${isEmailTouched && 'ion-touched'}`} 
             color="dark"
@@ -382,13 +445,36 @@ const Register: React.FC<navigateFormProps> = (props) => {
 }
 
 const RecoveryPart1: React.FC<navigateFormProps> = (props) => {
+  const [presentError] = useIonAlert();
+
+  const requestRecovery = async () => {
+    const req = document.getElementById("recoveryField") as HTMLInputElement;
+    const recovery: RecoveryTicketRequestParams = {
+      email: req.value,
+      username: req.value,
+      phoneNumber: isNaN(req.value as any) ? 0 : parseInt(req.value),
+    }
+
+    const response = await FetchIdentities.createTicketRecovery(recovery);
+    if (response.status == 201) {
+      props.setForms("recovery2");
+      return;
+    }
+
+    presentError({
+      header: "Atenção",
+      message: response.msg as string,
+      buttons: ['OK'],
+    })
+  }
+
   return (
     <div className="forms" id="recoveryPart1">
       <br></br><br></br>
       <IonTitle>Bora recuperar essa conta?</IonTitle>
       <br></br>
-      <IonInput color="dark" className='field' labelPlacement="floating" fill="solid" label='Email' type='email'></IonInput>
-      <IonButton className="sendForm" color="secondary" onClick={() => props.setForms("recovery2")}>
+      <IonInput id="recoveryField" color="dark" className='field' labelPlacement="floating" fill="solid" label='Email/Username'></IonInput>
+      <IonButton className="sendForm" color="secondary" onClick={() => requestRecovery()}>
         Enviar
         <IonIcon slot='end' icon={paperPlane} />
       </IonButton>
